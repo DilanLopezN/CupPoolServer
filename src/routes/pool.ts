@@ -18,12 +18,23 @@ export async function poolRoutes(fastify: FastifyInstance) {
     const generate = new ShortUniqueId({ length: 6 })
     const code = String(generate()).toUpperCase()
 
-    await prisma.pool.create({
-      data: {
-        title,
-        code
-      }
-    })
+    try {
+      await request.jwtVerify()
+    } catch {
+      await prisma.pool.create({
+        data: {
+          title,
+          code,
+          ownerId: request.user.sub,
+
+          participants: {
+            create: {
+              userId: request.user.sub
+            }
+          }
+        }
+      })
+    }
 
     return reply.status(201).send({ code })
   })

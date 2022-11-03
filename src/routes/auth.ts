@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { authenticate } from '../lib/plugins/authenticate'
+import { authenticate } from '../plugins/authenticate'
 import { prisma } from '../lib/prisma'
 
 export async function authRoutes(fastify: FastifyInstance) {
