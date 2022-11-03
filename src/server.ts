@@ -15,11 +15,11 @@ async function bootstrap() {
     origin: true
   })
 
-  fastify.register(poolRoutes)
-  fastify.register(authRoutes)
-  fastify.register(gameRoutes)
-  fastify.register(guessRoutes)
-  fastify.register(userRoutes)
+  await fastify.register(authRoutes)
+  await fastify.register(gameRoutes)
+  await fastify.register(guessRoutes)
+  await fastify.register(poolRoutes)
+  await fastify.register(userRoutes)
 
   await fastify.listen({ port: 3333 /*host: '0.0.0.0'*/ })
 }
