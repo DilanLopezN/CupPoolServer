@@ -1,8 +1,9 @@
-import { FastifyInstance } from 'fastify'
-import ShortUniqueId from 'short-unique-id'
 import { z } from 'zod'
+import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma'
+import ShortUniqueId from 'short-unique-id'
 import { authenticate } from '../plugins/authenticate'
+
 export async function poolRoutes(fastify: FastifyInstance) {
   fastify.get('/pools/count', async () => {
     const count = await prisma.pool.count()
@@ -14,6 +15,7 @@ export async function poolRoutes(fastify: FastifyInstance) {
     const createPoolBody = z.object({
       title: z.string()
     })
+
     const { title } = createPoolBody.parse(request.body)
 
     const generate = new ShortUniqueId({ length: 6 })
@@ -21,7 +23,7 @@ export async function poolRoutes(fastify: FastifyInstance) {
 
     try {
       await request.jwtVerify()
-    } catch {
+
       await prisma.pool.create({
         data: {
           title,
@@ -35,16 +37,21 @@ export async function poolRoutes(fastify: FastifyInstance) {
           }
         }
       })
+    } catch {
+      await prisma.pool.create({
+        data: {
+          title,
+          code
+        }
+      })
     }
 
     return reply.status(201).send({ code })
   })
 
   fastify.post(
-    '/pools/join',
-    {
-      onRequest: [authenticate]
-    },
+    '/pools/:id/join',
+    { onRequest: [authenticate] },
     async (request, reply) => {
       const joinPoolBody = z.object({
         code: z.string()
@@ -95,54 +102,48 @@ export async function poolRoutes(fastify: FastifyInstance) {
         }
       })
 
-      return reply.status(201).send()
+      return reply.status(201)
     }
   )
 
-  fastify.get(
-    '/pools',
-    {
-      onRequest: [authenticate]
-    },
-    async request => {
-      const pools = await prisma.pool.findMany({
-        where: {
-          participants: {
-            some: {
-              userId: request.user.sub
-            }
-          }
-        },
-        include: {
-          _count: {
-            select: {
-              participants: true
-            }
-          },
-          participants: {
-            select: {
-              id: true,
-
-              User: {
-                select: {
-                  avatarUrl: true
-                }
-              }
-            },
-            take: 4
-          },
-          owner: {
-            select: {
-              id: true,
-              name: true
-            }
+  fastify.get('/pools', { onRequest: [authenticate] }, async request => {
+    const pools = await prisma.pool.findMany({
+      where: {
+        participants: {
+          some: {
+            userId: request.user.sub
           }
         }
-      })
+      },
+      include: {
+        _count: {
+          select: {
+            participants: true
+          }
+        },
+        participants: {
+          select: {
+            id: true,
 
-      return { pools }
-    }
-  )
+            user: {
+              select: {
+                avatarUrl: true
+              }
+            }
+          },
+          take: 4
+        },
+        owner: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    })
+
+    return { pools }
+  })
 
   fastify.get('/pools/:id', { onRequest: [authenticate] }, async request => {
     const getPoolParams = z.object({
@@ -165,7 +166,7 @@ export async function poolRoutes(fastify: FastifyInstance) {
           select: {
             id: true,
 
-            User: {
+            user: {
               select: {
                 avatarUrl: true
               }
@@ -181,7 +182,6 @@ export async function poolRoutes(fastify: FastifyInstance) {
         }
       }
     })
-
     return { pool }
   })
 }
